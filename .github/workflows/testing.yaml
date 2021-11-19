@@ -16,4 +16,13 @@ jobs:
           git fetch
           git checkout -m origin/${{ github.ref_name }} installer.wxs
           git checkout -m origin/${{ github.ref_name }} LICENSE.rtf
-          dir
+          mkdir www
+          mkdir email
+          echo > pufferpanel.exe
+          
+          heat dir www -out www.wxs -gg -g1 -ke -nologo -cg WwwComponent -dr APPLICATIONROOTDIRECTORY
+          heat dir email -out email.wxs -gg -g1 -ke -nologo -cg EmailComponent -dr APPLICATIONROOTDIRECTORY
+          candle *.wxs -arch x64 -dProductVersion="${{ env.VERSION }}"
+          del www.wxs email.wxs
+          light *.wixobj -out pufferpanel.msi -b email -b www -ext WixUIExtension -cultures:en-us
+          del *.wixobj *wixpdb
