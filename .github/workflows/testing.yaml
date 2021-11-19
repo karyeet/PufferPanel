@@ -1,0 +1,23 @@
+name: Testing
+on:
+  push:
+    branches:
+    - actions-test
+    
+jobs:
+  test-build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Get the version
+        run: |
+          $VERSION="0.0.${{ github.run_number }}"
+          if ("${{ github.ref }}".startsWith("refs/tags/v")) {
+            $VERSION="${{ github.ref }}".substring('refs/tags/v'.length)
+          }
+          echo VERSION=$VERSION | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Validate version
+        run: |
+          echo "${{ env.VERSION }}"
+          echo $env:VERSION
