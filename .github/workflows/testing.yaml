@@ -13,6 +13,7 @@ jobs:
         run: |
           git init
           git remote add origin https://github.com/${{ github.repository }}.git
+          git fetch
           git checkout -m origin/${{ github.ref_name }} installer.wxs
           git checkout -m origin/${{ github.ref_name }} LICENSE.rtf
-          ls -l
+          dir
