@@ -18,7 +18,7 @@ jobs:
           git checkout -m origin/${{ github.ref_name }} LICENSE.rtf
           mkdir www
           mkdir email
-          echo > pufferpanel.exe
+          echo "" > pufferpanel.exe
           
           heat dir www -out www.wxs -gg -g1 -ke -nologo -cg WwwComponent -dr APPLICATIONROOTDIRECTORY
           heat dir email -out email.wxs -gg -g1 -ke -nologo -cg EmailComponent -dr APPLICATIONROOTDIRECTORY
