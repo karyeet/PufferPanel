@@ -15,10 +15,9 @@ jobs:
           if ("${{ github.ref }}".startsWith("refs/tags/v")) {
             $VERSION="${{ github.ref }}".substring('refs/tags/v'.length)
           }
-          echo VERSION=$VERSION | Out-File -FilePath $env:GITHUB_PATH -Append
-          cat $env:GITHUB_PATH
+          echo VERSION=$VERSION | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf-8 -Append
 
       - name: Validate version
         run: |
-          echo "${{ env.VERSION }}"
-          echo $env:VERSION
+          echo "More Testing - ${{ env.VERSION }}"
+          echo "Testing - $env:VERSION"
