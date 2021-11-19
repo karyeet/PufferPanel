@@ -16,6 +16,7 @@ jobs:
             $VERSION="${{ github.ref }}".substring('refs/tags/v'.length)
           }
           echo VERSION=$VERSION | Out-File -FilePath $env:GITHUB_PATH -Append
+          cat $env:GITHUB_PATH
 
       - name: Validate version
         run: |
