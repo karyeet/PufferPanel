@@ -607,9 +607,23 @@ jobs:
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
     - name: Build container
+      if: startsWith(matrix.platform, 'linux/amd64')
       uses: docker/build-push-action@v2
       with:
-        context: dockerfiles/massive
+        context: dockerfiles/massive-amd64
+        push: true
+        tags: ${{ env.TAG }}
+        build-args: |
+          sha: ${{ github.sha }}
+          version: ${{ env.VERSION }}
+          DOCKER_TAG: base-${{ env.VERSION }}
+        platforms: ${{ matrix.platform }}
+
+    - name: Build container
+      if: startsWith(matrix.platform, 'linux/arm64')
+      uses: docker/build-push-action@v2
+      with:
+        context: dockerfiles/massive-arm64
         push: true
         tags: ${{ env.TAG }}
         build-args: |
