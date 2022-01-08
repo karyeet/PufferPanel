@@ -28,3 +28,4 @@ Some images used within PufferPanel are Copyright (c) their respective owners.
 Development tools provided by [JetBrains](https://www.jetbrains.com/?from=PufferPanel)
 
 Repositories hosted by [packagecloud](https://packagecloud.io)
+
