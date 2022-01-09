@@ -20,7 +20,7 @@ RUN go version && \
 
 WORKDIR /build/pufferpanel
 COPY . .
-RUN go build -v -tags $tags -ldflags "-X 'github.com/pufferpanel/pufferpanel/v2.Hash=$sha' -X 'github.com/pufferpanel/pufferpanel/v2.Version=$version'" -o /pufferpanel/pufferpanel github.com/pufferpanel/pufferpanel/v2/cmd && \
+RUN go build -v -tags $tags -ldflags "-X 'github.com/karyeet/pufferpanel/v2.Hash=$sha' -X 'github.com/karyeet/pufferpanel/v2.Version=$version'" -o /pufferpanel/pufferpanel github.com/karyeet/pufferpanel/v2/cmd && \
     mv assets/email /pufferpanel/email && \
     cd client && \
     npm install && \

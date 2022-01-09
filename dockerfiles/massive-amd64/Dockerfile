@@ -1,6 +1,6 @@
 ARG DOCKER_TAG=base-devel
 
-FROM pufferpanel/pufferpanel:${DOCKER_TAG} AS builder
+FROM karyeet/pufferpanel:${DOCKER_TAG} AS builder
 
 FROM ubuntu:20.04
 
