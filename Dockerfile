@@ -15,6 +15,8 @@ ENV npm_config_registry=$npmproxy
 ENV GOPROXY=$goproxy
 
 RUN go version && \
+    add-apt-repository universe && \
+    curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash - && \
     apt-get update && \
     apt-get install -y gcc musl-dev git curl nodejs npm make gcc g++ python2 && \
     mkdir /pufferpanel
