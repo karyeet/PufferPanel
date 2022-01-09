@@ -15,7 +15,8 @@ ENV npm_config_registry=$npmproxy
 ENV GOPROXY=$goproxy
 
 RUN go version && \
-    apk add --update --no-cache gcc musl-dev git curl nodejs npm make gcc g++ python2 && \
+    apt-get update && \
+    apt-get install -y gcc musl-dev git curl nodejs npm make gcc g++ python2 && \
     mkdir /pufferpanel
 
 WORKDIR /build/pufferpanel
