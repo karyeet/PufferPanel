@@ -2,7 +2,7 @@ ARG DOCKER_TAG=base-devel
 
 ## Now our image
 
-FROM pufferpanel/pufferpanel:${DOCKER_TAG}
+FROM karyeet/pufferpanel:${DOCKER_TAG}
 
 ENV JAVA_HOME=/usr/lib/jvm/java-1.8-openjdk
 

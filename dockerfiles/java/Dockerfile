@@ -1,6 +1,6 @@
 ARG DOCKER_TAG=base-devel
 
-FROM pufferpanel/pufferpanel:${DOCKER_TAG}
+FROM karyeet/pufferpanel:${DOCKER_TAG}
 
 # enable testing repo
 

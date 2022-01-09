@@ -14,7 +14,7 @@ RUN tar -xvzf steamcmd.tar.gz && rm steamcmd.tar.gz
 
 ## Now our image
 
-FROM pufferpanel/pufferpanel:${DOCKER_TAG}
+FROM karyeet/pufferpanel:${DOCKER_TAG}
 
 # srcds
 RUN apk add --no-cache bash
