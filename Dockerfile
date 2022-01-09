@@ -17,7 +17,7 @@ ENV GOPROXY=$goproxy
 RUN go version && \
     curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
     apt-get update && \
-    apt-get install -y gcc musl-dev git curl nodejs npm make gcc g++ python2 && \
+    apt-get install -y gcc musl-dev git curl nodejs npm make gcc g++ python && \
     mkdir /pufferpanel
 
 WORKDIR /build/pufferpanel
