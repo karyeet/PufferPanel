@@ -1,7 +1,7 @@
 ###
 # Builder container
 ###
-FROM golang:stretch AS builder
+FROM golang:alpine AS builder
 
 ARG tags=none
 ARG version=devel
