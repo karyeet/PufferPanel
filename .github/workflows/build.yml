@@ -473,7 +473,7 @@ jobs:
       matrix:
         platform: ["linux/amd64","linux/arm64"]
 
-    timeout-minutes: 25
+#    timeout-minutes: 25
 
     steps:
     - name: Get the version
