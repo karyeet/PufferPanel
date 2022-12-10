@@ -471,7 +471,7 @@ jobs:
       VERSION: latest
     strategy:
       matrix:
-        platform: ["linux/amd64","linux/arm64"]
+        platform: linux/amd64, linux/arm64
 
 #    timeout-minutes: 25
 
