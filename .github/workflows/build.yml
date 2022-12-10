@@ -520,7 +520,7 @@ jobs:
         build-args: |
           sha: ${{ github.sha }}
           version: ${{ env.VERSION }}
-        platforms: ${{ matrix.platform }}
+        platforms: linux/amd64, linux/arm64
 
   build-docker-image-master:
     runs-on: ubuntu-20.04
