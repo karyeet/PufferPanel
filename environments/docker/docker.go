@@ -30,13 +30,14 @@ import (
 	"github.com/docker/go-connections/nat"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pufferpanel/pufferpanel/v2"
+	"github.com/pufferpanel/pufferpanel/v2/config"
 	"github.com/pufferpanel/pufferpanel/v2/logging"
 	"github.com/pufferpanel/pufferpanel/v2/messages"
+	"github.com/spf13/cast"
 	"io"
 	"os"
 	"path/filepath"
 	"runtime"
-	"syscall"
 	"time"
 )
 
@@ -110,13 +111,20 @@ func (d *docker) dockerExecuteAsync(steps pufferpanel.ExecutionData) error {
 		//because we use the auto-delete, we don't manually stop the container
 		//c, _ := d.getClient()
 		//err = c.ContainerStop(context.Background(), d.ContainerId, nil)
+		//if err != nil {
+		//	logging.Error.Printf("Error stopping container "+d.ContainerId, err)
+		//}
 
-		// The container hasn't actually been removed yet, we're sending an explicit remove to wait for it finish
-		_ = dockerClient.ContainerRemove(ctx, d.ContainerId, types.ContainerRemoveOptions{})
-		d.Wait.Done()
-		if err != nil {
-			logging.Error.Printf("Error stopping container "+d.ContainerId, err)
+		okChan, errChan := dockerClient.ContainerWait(ctx, d.ContainerId, container.WaitConditionRemoved)
+		select {
+		case _ = <-okChan:
+		case chanErr := <-errChan:
+			if chanErr != nil {
+				d.Log(logging.Error, "Error from error channel, awaiting exit `%v`\n", chanErr)
+			}
 		}
+
+		d.Wait.Done()
 
 		msg := messages.Status{Running: false}
 		_ = d.WSManager.WriteMessage(msg)
@@ -320,7 +328,7 @@ func (d *docker) pullImage(client *client.Client, ctx context.Context, force boo
 		exists = true
 	}
 
-	logging.Debug.Printf("Does image %v exist? %v", d.ImageName, exists)
+	d.Log(logging.Debug, "Does image %v exist? %v", d.ImageName, exists)
 
 	if exists && !force {
 		return nil
@@ -328,7 +336,7 @@ func (d *docker) pullImage(client *client.Client, ctx context.Context, force boo
 
 	op := types.ImagePullOptions{}
 
-	logging.Debug.Printf("Downloading image %v", d.ImageName)
+	d.Log(logging.Debug, "Downloading image %v", d.ImageName)
 	d.DisplayToConsole(true, "Downloading image for container, please wait\n")
 
 	d.downloadingImage = true
@@ -349,26 +357,18 @@ func (d *docker) pullImage(client *client.Client, ctx context.Context, force boo
 		return err
 	}
 
-	logging.Debug.Printf("Downloaded image %v", d.ImageName)
+	d.Log(logging.Debug, "Downloaded image %v", d.ImageName)
 	d.DisplayToConsole(true, "Downloaded image for container\n")
 	return err
 }
 
 func (d *docker) createContainer(client *client.Client, ctx context.Context, cmd string, args []string, env map[string]string, workDir string) error {
-	logging.Debug.Printf("Creating container")
+	d.Log(logging.Debug, "Creating container")
 	containerRoot := "/pufferpanel"
 	err := d.pullImage(client, ctx, false)
 
 	if err != nil {
 		return err
-	}
-
-	cmdSlice := strslice.StrSlice{}
-
-	cmdSlice = append(cmdSlice, cmd)
-
-	for _, v := range args {
-		cmdSlice = append(cmdSlice, v)
 	}
 
 	//newEnv := os.Environ()
@@ -382,7 +382,23 @@ func (d *docker) createContainer(client *client.Client, ctx context.Context, cmd
 		workDir = containerRoot
 	}
 
-	logging.Debug.Printf("Container command: %s\n", cmdSlice)
+	binaryFolder := config.BinariesFolder.Value()
+	if !filepath.IsAbs(binaryFolder) {
+		var ef error
+		binaryFolder, ef = filepath.Abs(binaryFolder)
+		if ef != nil {
+			logging.Error.Printf("Failed to resolve binary folder to absolute path: %s", ef)
+			binaryFolder = ""
+		}
+	}
+
+	cmdSlice := strslice.StrSlice{}
+	cmdSlice = append(cmdSlice, cmd)
+	for _, v := range args {
+		cmdSlice = append(cmdSlice, v)
+	}
+
+	d.Log(logging.Debug, "Container command: %s\n", cmdSlice)
 
 	containerConfig := &container.Config{
 		AttachStderr:    true,
@@ -391,10 +407,13 @@ func (d *docker) createContainer(client *client.Client, ctx context.Context, cmd
 		Tty:             true,
 		OpenStdin:       true,
 		NetworkDisabled: false,
-		Cmd:             cmdSlice,
 		Image:           d.ImageName,
 		WorkingDir:      workDir,
 		Env:             newEnv,
+		Entrypoint:      cmdSlice,
+		Labels: map[string]string{
+			"pufferpanel.server": d.ContainerId,
+		},
 	}
 
 	if runtime.GOOS == "linux" {
@@ -412,11 +431,16 @@ func (d *docker) createContainer(client *client.Client, ctx context.Context, cmd
 		dir = filepath.Join(pwd, dir)
 	}
 
+	bindDirs := []string{dir + ":" + containerRoot}
+	if binaryFolder != "" {
+		bindDirs = append(bindDirs, binaryFolder+":"+binaryFolder)
+	}
+
 	hostConfig := &container.HostConfig{
 		AutoRemove:   true,
 		NetworkMode:  container.NetworkMode(d.NetworkMode),
 		Resources:    d.Resources,
-		Binds:        []string{dir + ":" + containerRoot},
+		Binds:        bindDirs,
 		PortBindings: nat.PortMap{},
 	}
 
@@ -457,7 +481,7 @@ func (d *docker) SendCode(code int) error {
 	}
 
 	ctx := context.Background()
-	return dockerClient.ContainerKill(ctx, d.ContainerId, syscall.Signal(code).String())
+	return dockerClient.ContainerKill(ctx, d.ContainerId, cast.ToString(code))
 }
 
 func calculateCPUPercent(v *types.StatsJSON) float64 {

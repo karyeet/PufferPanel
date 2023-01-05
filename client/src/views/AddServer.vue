@@ -468,7 +468,7 @@ export default {
     async getNodes () {
       const nodes = await this.$api.getNodes()
       this.nodes = nodes.map(node => {
-        return { value: node.id, text: node.name }
+        return { value: node.id || 0, text: node.name }
       })
 
       if (this.nodes.length > 0) {
@@ -562,7 +562,7 @@ export default {
       return this.serverName.match(/^[\x20-\x7e]+$/)
     },
     step2CanContinue () {
-      return this.selectedNode && this.selectedEnvironment && this.isServerNameValid && this.servername !== ''
+      return (this.selectedNode === 0 || this.selectedNode) && this.selectedEnvironment && this.isServerNameValid && this.servername !== ''
     },
     step2Continue () {
       if (!this.step2CanContinue()) return

@@ -23,12 +23,17 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"sync"
 )
 
 var downloader sync.Mutex
 
 const DepotDownloaderLink = "https://github.com/SteamRE/DepotDownloader/releases/download/DepotDownloader_2.4.7/depotdownloader-2.4.7.zip"
+const SteamMetadataServerLink = "https://media.steampowered.com/client/"
+const SteamMetadataLinuxLink = SteamMetadataServerLink + "steam_cmd_linux"
+
+//const SteamMetadataWindowsLink = SteamMetadataServerLink + "steam_cmd_win32"
 
 func init() {
 }
@@ -48,6 +53,11 @@ func (c SteamGameDl) Run(env pufferpanel.Environment) (err error) {
 		return err
 	}
 
+	err = downloadMetadata(env)
+	if err != nil {
+		return err
+	}
+
 	var args = []string{filepath.Join(rootBinaryFolder, "depotdownloader", "DepotDownloader.dll"), "-app", c.AppId, "-dir", env.GetRootDirectory()}
 	if c.Username != "" {
 		args = append(args, "-username", c.Username, "-remember-password")
@@ -56,22 +66,30 @@ func (c SteamGameDl) Run(env pufferpanel.Environment) (err error) {
 		}
 	}
 
-	var success bool
+	ch := make(chan bool, 1)
 	steps := pufferpanel.ExecutionData{
 		//Command:          fmt.Sprintf("%s%c%s", ".", filepath.Separator, "dotnet"),
 		Command:   filepath.Join(rootBinaryFolder, "dotnet-runtime", "dotnet"),
 		Arguments: args,
 		Callback: func(exitCode bool) {
-			success = exitCode
+			ch <- exitCode
 		},
 	}
 	err = env.Execute(steps)
 	if err != nil {
 		return err
 	}
+	success := <-ch
 	if !success {
 		return errors.New("depotdownloader exited with non-zero code")
 	}
+
+	//for some steam games, there's a binary we can instant-mark
+	fi, err := os.Stat(filepath.Join(env.GetRootDirectory(), "srcds_run"))
+	if err == nil && !fi.IsDir() {
+		_ = os.Chmod(filepath.Join(env.GetRootDirectory(), "srcds_run"), 0755)
+	}
+
 	return nil
 }
 
@@ -127,5 +145,57 @@ func downloadDotNet(targetFolder string) error {
 	}
 
 	_, err = io.Copy(target, response.Body)
+	return err
+}
+
+func downloadMetadata(env pufferpanel.Environment) error {
+	if runtime.GOOS != "linux" {
+		env.DisplayToConsole(true, "Node does not support linux, cannot download steam libraries. While this "+
+			"will not stop the installation, the server may not fully work")
+		return nil
+	}
+
+	if runtime.GOARCH != "amd64" {
+		env.DisplayToConsole(true, "Node does not support amd64, cannot download steam libraries. While this "+
+			"will not stop the installation, the server may not fully work")
+		return nil
+	}
+
+	downloadOs := "linux"
+	link := SteamMetadataLinuxLink
+	/*if runtime.GOOS == "windows" {
+		downloadOs = "win32"
+		link = SteamMetadataWindowsLink
+	}*/
+
+	response, err := pufferpanel.HttpGet(link)
+	defer pufferpanel.CloseResponse(response)
+	if err != nil {
+		return err
+	}
+
+	metadataName, err := Parse(downloadOs, response.Body)
+	pufferpanel.CloseResponse(response)
+
+	if err != nil {
+		return err
+	}
+
+	err = os.RemoveAll(filepath.Join(env.GetRootDirectory(), ".steam"))
+	if err != nil {
+		return err
+	}
+
+	err = pufferpanel.HttpGetZip(SteamMetadataServerLink+metadataName, filepath.Join(env.GetRootDirectory(), ".steam"))
+	if err != nil {
+		return err
+	}
+
+	err = os.Rename(filepath.Join(env.GetRootDirectory(), ".steam", "linux32"), filepath.Join(env.GetRootDirectory(), ".steam", "sdk32"))
+	if err != nil {
+		return err
+	}
+
+	err = os.Rename(filepath.Join(env.GetRootDirectory(), ".steam", "linux64"), filepath.Join(env.GetRootDirectory(), ".steam", "sdk64"))
 	return err
 }
