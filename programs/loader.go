@@ -77,6 +77,7 @@ func LoadFromFolder() {
 			logging.Error.Printf("Error loading server tasks from json (%s): %s", element.Name(), err)
 			continue
 		}
+
 		err = program.Scheduler.Start()
 		if err != nil {
 			logging.Error.Printf("Error starting server scheduler (%s): %s", element.Name(), err)
@@ -148,6 +149,14 @@ func LoadFromData(id string, source []byte) (*Program, error) {
 
 	environmentType := typeMap.Type
 	data.RunningEnvironment, err = environments.Create(environmentType, config.ServersFolder.Value(), id, data.Environment)
+	if err != nil {
+		return nil, err
+	}
+
+	data.fs, err = pufferpanel.NewFileServer(data.RunningEnvironment.GetRootDirectory())
+	if err != nil {
+		return nil, err
+	}
 	return data, nil
 }
 
@@ -216,6 +225,7 @@ func Create(program *Program) error {
 	defer func() {
 		if err != nil {
 			//revert since we have an error
+			_ = os.Remove(filepath.Join(config.ServersFolder.Value(), program.Id()))
 			_ = os.Remove(filepath.Join(config.ServersFolder.Value(), program.Id()+".json"))
 			if program.RunningEnvironment != nil {
 				_ = program.RunningEnvironment.Delete()
@@ -223,7 +233,14 @@ func Create(program *Program) error {
 		}
 	}()
 
-	f, err := os.Create(filepath.Join(config.ServersFolder.Value(), program.Id()+".json"))
+	err = os.Mkdir(filepath.Join(config.ServersFolder.Value(), program.Id()), 0755)
+	if err != nil {
+		logging.Error.Printf("Error creating server directory: %s", err)
+		return err
+	}
+
+	var f *os.File
+	f, err = os.Create(filepath.Join(config.ServersFolder.Value(), program.Id()+".json"))
 	defer pufferpanel.Close(f)
 	if err != nil {
 		logging.Error.Printf("Error writing server: %s", err)
@@ -247,6 +264,11 @@ func Create(program *Program) error {
 	}
 
 	program.RunningEnvironment, err = environments.Create(typeMap.Type, config.ServersFolder.Value(), program.Id(), program.Environment)
+	if err != nil {
+		return err
+	}
+
+	program.fs, err = pufferpanel.NewFileServer(program.RunningEnvironment.GetRootDirectory())
 	if err != nil {
 		return err
 	}
